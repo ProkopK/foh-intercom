@@ -4,7 +4,6 @@ import requests
 import paho.mqtt.client as mqtt
 import os
 import threading
-from station_config import STATION_NAME
 
 # GPIO pin assignments
 BUTTON_PINS = [17, 27, 22]
