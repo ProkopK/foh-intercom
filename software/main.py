@@ -2,14 +2,20 @@ import RPi.GPIO as GPIO
 import time
 import requests
 import paho.mqtt.client as mqtt
+import os
+import threading
+from station_config import STATION_NAME
 
 # GPIO pin assignments
 BUTTON_PINS = [17, 27, 22]
-LED_PINS = [5, 6, 13]
-RGB_PINS = {'R': 18, 'G': 23, 'B': 24}
+LED_PINS = [5, 6, 26]
+RGB_PINS = {'R': 23, 'G': 24, 'B': 25}
+
+# Station configuration
+os.getenv("INTERCOM_STATION", default="foh")
 
 # MQTT settings
-MQTT_BROKER = '192.168.178.10'  # Set to your Mosquitto broker IP in your local network
+MQTT_BROKER = os.getenv("INTERCOM_BROKER", default="192.168.178.21")
 MQTT_PORT = 1883
 MQTT_TOPIC = 'intercom/buttons'
 STATUS_TOPIC = 'intercom/system_status'
@@ -39,10 +45,6 @@ def check_network():
     except:
         return False
 
-
-# --- New MQTT and LED communication logic ---
-import threading
-from station_config import STATION_NAME
 
 led_blink_end = [0, 0, 0]
 led_respond_end = [0, 0, 0]
