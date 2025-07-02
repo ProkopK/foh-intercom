@@ -1,4 +1,4 @@
-# Intercom Offenbarung
+# FOH Intercom
 
 A networked communication system for theatre Front of House (FOH) and stage, using Raspberry Pi 4B, buttons, LEDs, and headsets.
 
