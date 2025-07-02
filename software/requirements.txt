@@ -1,0 +1,4 @@
+
+RPi.GPIO
+requests
+paho-mqtt

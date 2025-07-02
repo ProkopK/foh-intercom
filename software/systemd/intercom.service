@@ -1,0 +1,12 @@
+[Unit]
+Description=Intercom Offenbarung Service
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /home/pi/Intercom-Offenbarung/software/main.py
+WorkingDirectory=/home/pi/Intercom-Offenbarung/software/
+Restart=always
+User=pi
+
+[Install]
+WantedBy=multi-user.target

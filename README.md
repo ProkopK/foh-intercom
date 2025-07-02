@@ -1,197 +1,87 @@
-# FOH Intercom
+# Intercom Offenbarung
 
-A simple MQTT-powered intercom system for theater, using Raspberry Pis with 3 LED buttons each.
+A networked communication system for theatre FOH and stage, using Raspberry Pi 4B, buttons, LEDs, and headsets.
 
 ## Features
-
-- Button presses are sent via MQTT to all stations.
-- Corresponding LEDs light up on all other stations.
-- Built for easy setup and update via Git.
-- Designed for future extension (e.g., headset audio communication).
-
----
+- 3-button interface with LED feedback for state communication (e.g., stage free, problem, etc.)
+- RGB LED for network/system status
+- (Planned) Push-to-talk headset audio
+- All devices networked via PoE and managed from a central repository
 
 ## Hardware
+- Raspberry Pi 4B (with PoE hats)
+- 3x Push Buttons (with LEDs or RGB LEDs)
+- 1x RGB LED (for status)
+- Headset with microphone (future)
+- Ethernet switch and Fritzbox 7270 v3
 
-- Raspberry Pi (any model with GPIO and network)
-- 3x LED pushbuttons, wired to GPIO (edit pins in script if needed)
-- Resistors as required
-- Breadboard or HAT for connections
+See `hardware/` for wiring diagrams and parts list.
 
----
+## Software
+- Python scripts for button/LED control and network communication
+- Systemd service for auto-start
+- Update via git pull or script
 
-## Setup Instructions
+See `software/` for code and setup instructions.
 
-### 1. Clone the Repository
+## Installation & Setup (Step-by-Step)
 
-On each Pi:
-```sh
-git clone https://github.com/ProkopK/foh-intercom.git
-cd foh-intercom/intercom
-```
+### 1. Prepare Hardware
+- Assemble hardware as per diagrams in `hardware/`
+- Connect all Raspberry Pis to your network via Ethernet (PoE recommended)
 
----
+### 2. Flash Raspberry Pi OS
+- Download and flash Raspberry Pi OS (Lite recommended) to each Pi
+- Boot each Pi and set up SSH/network as needed
 
-### 2. Install Python Dependencies
+### 3. Set Up the FOH Station as MQTT Broker
+On the FOH Pi (or your chosen broker device):
 
-```sh
-pip install -r requirements.txt
-```
-
----
-
-### 3. Install and Configure MQTT Broker (Mosquitto)
-
-You can run the broker on any Pi or server on your LAN.
-
-#### Install Mosquitto Broker
-```sh
+```bash
 sudo apt update
-sudo apt install mosquitto mosquitto-clients
+sudo apt install -y mosquitto mosquitto-clients
 sudo systemctl enable mosquitto
 sudo systemctl start mosquitto
 ```
+The broker will now run on the FOH Pi. Find its IP address with:
+```bash
+hostname -I
+```
+Use this IP for `MQTT_BROKER` in your code/config.
 
-#### Secure the Broker
-
-- **Username/Password:**  
-  ```sh
-  sudo mosquitto_passwd -c /etc/mosquitto/passwd myuser
-  ```
-  (Enter your password when prompted.)
-
-- **Configure Mosquitto:**  
-  Edit `/etc/mosquitto/conf.d/default.conf` or `/etc/mosquitto/mosquitto.conf` to add:
-  ```
-  allow_anonymous false
-  password_file /etc/mosquitto/passwd
-  ```
-  Restart Mosquitto:
-  ```sh
-  sudo systemctl restart mosquitto
-  ```
-
-- **(Optional: TLS/ACL):**  
-  For advanced security (encrypted connections, topic access control), see Mosquitto docs:  
-  [https://mosquitto.org/man/mosquitto-conf-5.html](https://mosquitto.org/man/mosquitto-conf-5.html)
-
----
-
-### 4. Environment Variables for Configuration
-
-Set configuration easily for each Pi using environment variables.
-
-#### Temporary (for one terminal session):
-
-```sh
-export INTERCOM_STATION=foh
-export INTERCOM_BROKER=192.168.178.42
-python3 foh_intercom_mqtt.py
+### 4. Clone the Repository on All Pis
+```bash
+git clone <your-repo-url>
+cd Intercom\ Offenbarung/software
 ```
 
-#### Permanent (every boot/user session):
-
-Add to `~/.bashrc`:
-```sh
-echo "export INTERCOM_STATION=foh" >> ~/.bashrc
-echo "export INTERCOM_BROKER=192.168.178.42" >> ~/.bashrc
-source ~/.bashrc
+### 5. Install Python Requirements
+```bash
+sudo apt update
+sudo apt install -y python3 python3-pip
+pip3 install -r requirements.txt
 ```
 
-#### (Optional) Use an environment file with systemd, e.g., `/etc/foh-intercom.env`:
-```
-INTERCOM_STATION=foh
-INTERCOM_BROKER=192.168.178.42
-```
+### 6. Configure Each Station
+- Edit `software/station_config.py` and set `STATION_NAME` to one of: `foh`, `stage_left`, or `stage_right` (unique per Pi)
+- Edit `main.py` and set `MQTT_BROKER` to the IP address of your FOH Pi
 
----
-
-### 5. Running the Intercom
-
-```sh
-python3 foh_intercom_mqtt.py
-```
-
-- Set the station name and broker address per Pi as above.
-- Press a button to send status to all stations.
-
----
-
-### 6. Enable Auto-Start at Boot (systemd)
-
-#### Create a systemd service:
-
-```sh
-sudo nano /etc/systemd/system/foh-intercom.service
-```
-
-Paste:
-```
-[Unit]
-Description=FOH Intercom MQTT Service
-After=network.target
-
-[Service]
-Type=simple
-User=pi
-WorkingDirectory=/home/pi/foh-intercom/intercom
-Environment=INTERCOM_STATION=foh
-Environment=INTERCOM_BROKER=192.168.178.42
-ExecStart=/usr/bin/python3 /home/pi/foh-intercom/intercom/foh_intercom_mqtt.py
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
-```
-- Adjust paths and station/broker names as needed.
-
-#### Enable and Start Service:
-
-```sh
+### 7. (Optional) Enable Auto-Start with systemd
+On each Pi:
+```bash
+sudo cp systemd/intercom.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable foh-intercom.service
-sudo systemctl start foh-intercom.service
+sudo systemctl enable intercom.service
+sudo systemctl start intercom.service
 ```
 
-Check status/logs:
-```sh
-sudo systemctl status foh-intercom.service
-journalctl -u foh-intercom.service
+### 8. Updating
+To update the software on all Pis:
+```bash
+git pull
+sudo systemctl restart intercom.service
 ```
 
 ---
 
-### 7. Updating
-
-Pull updates on each Pi:
-
-```sh
-git pull origin main
-```
-
-- Use environment variables or systemd as above for config.
-- For multiple Pis, consider using Ansible or a deployment script for automation.
-
----
-
-### 8. Troubleshooting
-
-- Ensure all Pis are on the same network (via Fritz!Box or similar router).
-- Check that each Pi has the correct `INTERCOM_STATION` and `INTERCOM_BROKER` settings.
-- If MQTT communication fails, verify broker is running and accessible (`mosquitto_sub -v -t "#" -h BROKER_IP -u myuser -P password`).
-
----
-
-## Next Steps
-
-- Add headset/audio features in the future.
-- Improve UI and LED feedback as needed.
-- Secure MQTT further for production (see above).
-
----
-
-## References
-
-- [Mosquitto Documentation](https://mosquitto.org/man/mosquitto-conf-5.html)
-- [gpiozero Library](https://gpiozero.readthedocs.io/en/stable/)
-- [paho-mqtt Python Client](https://pypi.org/project/paho-mqtt/)
+For details, see the subfolders and documentation files.
