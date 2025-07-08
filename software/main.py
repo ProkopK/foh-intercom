@@ -4,11 +4,18 @@ import requests
 import paho.mqtt.client as mqtt
 import os
 import threading
+import logging
+import signal
 
 # GPIO pin assignments
 BUTTON_PINS = [17, 27, 22]
 LED_PINS = [5, 6, 26]
 RGB_PINS = {'R': 23, 'G': 24, 'B': 25}
+
+# Constants
+BLINK_DURATION = 20  # seconds
+RESPOND_DURATION = 5  # seconds
+DEBOUNCE_TIME = 0.2  # seconds
 
 # Station configuration
 STATION_NAME = os.getenv("INTERCOM_STATION", default="foh")
@@ -18,6 +25,9 @@ MQTT_BROKER = os.getenv("INTERCOM_BROKER", default="192.168.178.11")
 MQTT_PORT = 1883
 MQTT_TOPIC = 'intercom/buttons'
 STATUS_TOPIC = 'intercom/system_status'
+
+# Setup logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
 
 # Setup GPIO
 GPIO.setmode(GPIO.BCM)
@@ -41,18 +51,26 @@ def check_network():
         client.connect(MQTT_BROKER, MQTT_PORT, 2)
         client.disconnect()
         return True
-    except:
+    except Exception as e:
+        logging.warning(f"Network check failed: {e}")
         return False
 
 
+
+# Thread safety for LED state
 led_blink_end = [0, 0, 0]
 led_respond_end = [0, 0, 0]
+led_lock = threading.Lock()
 
-def blink_led(idx, duration=20):
+def blink_led(idx, duration=BLINK_DURATION):
     def _blink():
         end_time = time.time() + duration
-        led_blink_end[idx] = end_time
-        while time.time() < end_time and led_blink_end[idx] == end_time:
+        with led_lock:
+            led_blink_end[idx] = end_time
+        while time.time() < end_time:
+            with led_lock:
+                if led_blink_end[idx] != end_time:
+                    break
             GPIO.output(LED_PINS[idx], 1)
             time.sleep(0.5)
             GPIO.output(LED_PINS[idx], 0)
@@ -62,18 +80,20 @@ def blink_led(idx, duration=20):
     t.daemon = True
     t.start()
 
-def respond_led(idx, duration=5):
+def respond_led(idx, duration=RESPOND_DURATION):
     def _respond():
         GPIO.output(LED_PINS[idx], 1)
         time.sleep(duration)
         GPIO.output(LED_PINS[idx], 0)
-    led_respond_end[idx] = time.time() + duration
+    with led_lock:
+        led_respond_end[idx] = time.time() + duration
     t = threading.Thread(target=_respond)
     t.daemon = True
     t.start()
 
 def on_connect(client, userdata, flags, rc):
     client.subscribe(MQTT_TOPIC)
+    logging.info(f"Connected to MQTT broker with result code {rc}")
 
 def on_message(client, userdata, msg):
     try:
@@ -86,47 +106,71 @@ def on_message(client, userdata, msg):
             ts = float(ts)
             handle_button_event(station, btn_idx, ts)
     except Exception as e:
-        print(f"MQTT message error: {e}")
+        logging.error(f"MQTT message error: {e}")
 
 def send_mqtt_message(station, button_idx):
     try:
         payload = f"{station}:{button_idx}:{time.time()}"
         mqtt_client.publish(MQTT_TOPIC, payload)
+        logging.info(f"Sent MQTT message: {payload}")
     except Exception as e:
-        print(f"MQTT send error: {e}")
+        logging.error(f"MQTT send error: {e}")
 
 def handle_button_event(station, button_idx, ts):
     now = time.time()
     if station == STATION_NAME:
         return
-    # If we are blinking, and someone else presses the same button, show respond
-    if led_blink_end[button_idx] > now:
-        led_blink_end[button_idx] = 0  # Stop blinking
-        respond_led(button_idx)
-    else:
-        # Start blinking for 20s
-        blink_led(button_idx, 20)
+    with led_lock:
+        if led_blink_end[button_idx] > now:
+            led_blink_end[button_idx] = 0  # Stop blinking
+            respond_led(button_idx)
+        else:
+            # Start blinking for BLINK_DURATION
+            blink_led(button_idx, BLINK_DURATION)
 
-# Persistent MQTT client
-mqtt_client = mqtt.Client()
-mqtt_client.on_connect = on_connect
-mqtt_client.on_message = on_message
-mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
-mqtt_client.loop_start()
+# Persistent MQTT client with reconnect
+def start_mqtt():
+    global mqtt_client
+    mqtt_client = mqtt.Client()
+    mqtt_client.on_connect = on_connect
+    mqtt_client.on_message = on_message
+    while True:
+        try:
+            mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
+            mqtt_client.loop_start()
+            break
+        except Exception as e:
+            logging.error(f"MQTT connection failed: {e}, retrying in 5s...")
+            time.sleep(5)
+
+start_mqtt()
 
 system_status = 'unknown'
 def on_status(client, userdata, msg):
     global system_status
     try:
         system_status = msg.payload.decode()
-    except Exception:
+    except Exception as e:
+        logging.error(f"Status message error: {e}")
         system_status = 'unknown'
 
 mqtt_client.message_callback_add(STATUS_TOPIC, on_status)
 mqtt_client.subscribe(STATUS_TOPIC)
 
-try:
-    last_button = [1, 1, 1]
+# Debounce state
+last_button = [1, 1, 1]
+last_press_time = [0, 0, 0]
+
+def cleanup(signum=None, frame=None):
+    logging.info("Cleaning up GPIO and exiting...")
+    GPIO.cleanup()
+    exit(0)
+
+# Register signal handlers for clean exit
+signal.signal(signal.SIGINT, cleanup)
+signal.signal(signal.SIGTERM, cleanup)
+
+def main_loop():
     while True:
         # Network/system status LED
         if not check_network():
@@ -137,16 +181,20 @@ try:
             set_rgb(1, 1, 0)  # Yellow: Some missing
         else:
             set_rgb(0, 0, 1)  # Blue: Unknown
-        # Button check
+        # Button check with debounce
         for i, pin in enumerate(BUTTON_PINS):
             state = GPIO.input(pin)
-            if state == 0 and last_button[i] == 1:
+            now = time.time()
+            if state == 0 and last_button[i] == 1 and (now - last_press_time[i]) > DEBOUNCE_TIME:
                 # Button pressed
                 send_mqtt_message(STATION_NAME, i)
-                blink_led(i, 20)
+                blink_led(i, BLINK_DURATION)
+                last_press_time[i] = now
             last_button[i] = state
-        time.sleep(0.1)
-except KeyboardInterrupt:
-    pass
-finally:
-    GPIO.cleanup()
+        time.sleep(0.05)
+
+try:
+    main_loop()
+except Exception as e:
+    logging.critical(f"Unhandled exception in main loop: {e}", exc_info=True)
+    cleanup()
