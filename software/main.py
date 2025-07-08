@@ -11,10 +11,10 @@ LED_PINS = [5, 6, 26]
 RGB_PINS = {'R': 23, 'G': 24, 'B': 25}
 
 # Station configuration
-os.getenv("INTERCOM_STATION", default="foh")
+STATION_NAME = os.getenv("INTERCOM_STATION", default="foh")
 
 # MQTT settings
-MQTT_BROKER = os.getenv("INTERCOM_BROKER", default="192.168.178.21")
+MQTT_BROKER = os.getenv("INTERCOM_BROKER", default="192.168.178.11")
 MQTT_PORT = 1883
 MQTT_TOPIC = 'intercom/buttons'
 STATUS_TOPIC = 'intercom/system_status'

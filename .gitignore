@@ -1,0 +1,73 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Virtual environments
+venv/
+ENV/
+.env/
+.venv/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# VS Code settings
+.vscode/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Python egg files
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Log files
+*.log
+
+# OS generated files
+*.swp
+*.swo
+
+# Local environment variables
+.env
+
+# Ignore compiled binaries
+*.out
+*.o
+*.a
+*.exe
+*.dll
+*.obj
+*.class
+
+# Ignore pip wheel files
+*.whl
+
+# Ignore test coverage reports
+htmlcov/
+.coverage
+.tox/
+
+# Ignore user-specific files
+*.bak
+*.tmp
+
+# Ignore backup files
+*~
+
+# Ignore Python cache
+.pytest_cache/
+
+# Ignore Raspberry Pi specific files
+*.img
+
+# Ignore private files
+Bestelliste.txt

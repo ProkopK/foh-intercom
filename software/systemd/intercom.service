@@ -3,8 +3,8 @@ Description=FOH Intercom Service
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/python3 /home/pi/foh-intercom/software/main.py
-WorkingDirectory=/home/pi/foh-intercom/software/
+ExecStart=/usr/bin/python3 ~/foh-intercom/software/main.py
+WorkingDirectory=~/foh-intercom/software/
 Restart=always
 User=pi
 
