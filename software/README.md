@@ -78,6 +78,17 @@ echo "export INTERCOM_STATION=>>Station Name<<" >> ~/.bashrc
 echo "export MQTT_BROKER=>>IP-Adress of MQTT Broker xx.xx.xx.xx<<" >> ~/.bashrc
 source ~/.bashrc
 pip install -r requirements.txt
+
+# If you want to use a .env file for configuration (recommended for advanced setups), install python-dotenv is included in requirements.txt.
+# Create a file named `.env` in the `software/` directory and add lines like:
+#
+# INTERCOM_STATION=foh
+# INTERCOM_BROKER=192.168.178.11
+# BUTTON_PINS=17,27,22
+# LED_PINS=5,6,26
+# RGB_PIN_R=23
+# RGB_PIN_G=24
+# RGB_PIN_B=25
 ```
 
 ## 6. Enable Auto-Start with systemd
@@ -94,3 +105,45 @@ To update the software on all Pis:
 git pull
 sudo systemctl restart intercom.service
 ```
+
+---
+
+## 8. System Status Broker Service (Recommended for FOH Pi)
+This service monitors all stations and publishes system status to the network. It should run only on the FOH Pi.
+
+1. Copy the service file:
+   ```bash
+   sudo cp systemd/system_status_broker.service /etc/systemd/system/
+   sudo systemctl daemon-reload
+   sudo systemctl enable system_status_broker.service
+   sudo systemctl start system_status_broker.service
+   ```
+2. The broker will now monitor all stations and publish status to the MQTT topic.
+
+---
+
+## Code Structure (Modular Python)
+- `main.py`: Main entry point for each station. Loads config, sets up GPIO and MQTT, runs the main loop.
+- `gpio_control.py`: GPIO setup and all LED/button logic, thread-safe.
+- `mqtt_client.py`: MQTT connection, message handling, and reconnect logic.
+- `config.py`: Loads configuration from environment variables or `.env` file.
+- `system_status_broker.py`: Monitors all stations and publishes system status (run on FOH Pi).
+
+## .env Configuration (Advanced/Optional)
+You can use a `.env` file in the `software/` directory to override any environment variable. Example:
+```
+INTERCOM_STATION=foh
+INTERCOM_BROKER=192.168.178.11
+BUTTON_PINS=17,27,22
+LED_PINS=5,6,26
+RGB_PIN_R=23
+RGB_PIN_G=24
+RGB_PIN_B=25
+MQTT_PORT=1883
+MQTT_TOPIC=intercom/buttons
+STATUS_TOPIC=intercom/system_status
+```
+
+Any variable not set in `.env` will fall back to the default in the code.
+
+---
