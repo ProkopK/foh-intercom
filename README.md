@@ -27,7 +27,7 @@ See [`hardware/`](hardware/) for wiring diagrams and parts list.
 ## Software
 - Python 3 scripts for button/LED control and network communication
 - Systemd service for automatic startup on boot
-- Easy updates via `git pull` or update script
+- Easy updates via `git pull`
 
 
 See [`software/`](software/) for code and setup instructions.
@@ -37,17 +37,17 @@ See [`software/`](software/) for code and setup instructions.
 - See `software/requirements.txt` for required Python packages
 
 ### Quick Start
-1. Clone this repository to your Raspberry Pi:
+1. Connect hardware as shown in the wiring diagrams in `hardware/`.
+2. Clone this repository to your Raspberry Pi:
    ```bash
-   git clone <repo-url>
+   git clone https://github.com/ProkopK/foh-intercom.git
    ```
-2. Install Python dependencies:
+3. Install Python dependencies:
    ```bash
-   cd software
    pip install -r requirements.txt
    ```
-3. Set up the systemd service for auto-start (see `software/systemd/README.md` for details).
-4. Connect hardware as shown in the wiring diagrams in `hardware/`.
+4. Set up environment variables
+5. Set up the systemd service for auto-start.
 5. Power up the device via PoE and test button/LED functionality.
 
 ### Usage

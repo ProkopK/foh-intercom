@@ -7,7 +7,7 @@ import time
 from typing import List, Dict
 
 class GPIOController:
-    def __init__(self, button_pins: List[int], led_pins: List[int], rgb_pins: Dict[str, int]):
+    def __init__(self, button_pins: Dict[int, int], led_pins: Dict[int, int], rgb_pins: Dict[str, int]):
         self.button_pins = button_pins
         self.led_pins = led_pins
         self.rgb_pins = rgb_pins
@@ -20,9 +20,9 @@ class GPIOController:
 
     def setup_gpio(self):
         GPIO.setmode(GPIO.BCM)
-        for pin in self.button_pins:
+        for pin in self.button_pins.values():
             GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-        for pin in self.led_pins:
+        for pin in self.led_pins.values():
             GPIO.setup(pin, GPIO.OUT)
         for pin in self.rgb_pins.values():
             GPIO.setup(pin, GPIO.OUT)
@@ -62,7 +62,6 @@ class GPIOController:
         t.start()
 
     def read_button(self, idx: int) -> int:
-        """Read the state of a button (0=pressed, 1=released)."""
         return GPIO.input(self.button_pins[idx])
 
     def cleanup(self):

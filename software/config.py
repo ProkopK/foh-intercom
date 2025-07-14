@@ -5,18 +5,20 @@ import os
 from dotenv import load_dotenv
 from typing import List, Dict
 
-def parse_pin_list(env_var: str, default: List[int]) -> List[int]:
-    val = os.getenv(env_var)
-    if val:
-        return [int(x) for x in val.split(",")]
-    return default
-
 def load_config() -> Dict:
     """Load all configuration from environment variables or .env file."""
     load_dotenv()
     config = {
-        'BUTTON_PINS': parse_pin_list("BUTTON_PINS", [17, 27, 22]),
-        'LED_PINS': parse_pin_list("LED_PINS", [5, 6, 26]),
+        'BUTTON_PINS': {
+            0: int(os.getenv("BUTTON_PIN_Green", 17)),
+            1: int(os.getenv("BUTTON_PIN_Orange", 27)),
+            2: int(os.getenv("BUTTON_PIN_Red", 22)),
+        },
+        'LED_PINS': {
+            0: int(os.getenv("LED_PIN_Green", 5)),
+            1: int(os.getenv("LED_PIN_Orange", 6)),
+            2: int(os.getenv("LED_PIN_Red", 26)),
+        },
         'RGB_PINS': {
             'R': int(os.getenv("RGB_PIN_R", 23)),
             'G': int(os.getenv("RGB_PIN_G", 24)),
@@ -26,9 +28,10 @@ def load_config() -> Dict:
         'RESPOND_DURATION': int(os.getenv("RESPOND_DURATION", 5)),
         'DEBOUNCE_TIME': float(os.getenv("DEBOUNCE_TIME", 0.2)),
         'STATION_NAME': os.getenv("INTERCOM_STATION", "foh"),
-        'MQTT_BROKER': os.getenv("INTERCOM_BROKER", os.getenv("MQTT_BROKER", "192.168.178.11")),
+        'MQTT_BROKER': os.getenv("MQTT_BROKER", "192.168.178.11"),
         'MQTT_PORT': int(os.getenv("MQTT_PORT", 1883)),
-        'MQTT_TOPIC': os.getenv("MQTT_TOPIC", "intercom/buttons"),
-        'STATUS_TOPIC': os.getenv("STATUS_TOPIC", "intercom/system_status"),
+        'STATIONS': os.getenv("STATIONS", "foh,stage_left,stage_right").split(","),
+        'TIMEOUT': int(os.getenv("TIMEOUT", 15)),
+        'HEARTBEAT_INTERVAL': int(os.getenv("HEARTBEAT_INTERVAL", 10)),
     }
     return config

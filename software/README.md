@@ -27,12 +27,12 @@ To ensure reliable communication, assign a static IP address to each Raspberry P
    ```bash
    sudo reboot
    ```
+5. Verify the IP address with:
+   ```bash
+   hostname -I
+   ```
 5. Repeat for each Pi, assigning a different static IP address to each one.
 
-After reboot, verify the IP address with:
-```bash
-hostname -I
-```
 
 ## 3. Install Required Software on Each Pi
 On each Pi, run:
@@ -70,34 +70,39 @@ cd foh-intercom/software
 ```
 
 ## 5. Install Python Dependencies and Set Environment Variables
-On each Pi run the following commands, replacing `>>Station Name<<` with the appropriate station name (e.g., `foh`, `stage_left`, or `stage_right`) and `>>IP-Adress of MQTT Broker xx.xx.xx.xx<<` with the IP address of the FOH Pi:
+On each Pi run the following commands:
 ```bash
-python -m venv ~/foh-intercom/venv
+python3 -m venv ~/foh-intercom/venv
 echo "source ~/foh-intercom/venv/bin/activate" >> ~/.bashrc
-echo "export INTERCOM_STATION=>>Station Name<<" >> ~/.bashrc
-echo "export MQTT_BROKER=>>IP-Adress of MQTT Broker xx.xx.xx.xx<<" >> ~/.bashrc
 source ~/.bashrc
 pip install -r requirements.txt
-
-# If you want to use a .env file for configuration (recommended for advanced setups), install python-dotenv is included in requirements.txt.
-# Create a file named `.env` in the `software/` directory and add lines like:
-#
-# INTERCOM_STATION=foh
-# INTERCOM_BROKER=192.168.178.11
-# BUTTON_PINS=17,27,22
-# LED_PINS=5,6,26
-# RGB_PIN_R=23
-# RGB_PIN_G=24
-# RGB_PIN_B=25
+```
+Set up environment variables for each Pi, change the values. Use the IP address of the FOH Pi as `MQTT_BROKER`, as `STATION_NAME` use `foh` for the FOH Pi and `stage_left` or `stage_right` for the stage Pi:
+```bash
+touch .env
+echo "export STATION_NAME=foh" >> .env
+echo "export MQTT_BROKER=192.168.178.11" >> .env
+echo "export STATIONS=foh,stage_left,stage_right" >> .env
+echo "export MQTT_PORT=1883" >> .env
 ```
 
 ## 6. Enable Auto-Start with systemd
+For each Pi, copy the service file and enable it:
 ```bash
 sudo cp systemd/intercom.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable intercom.service
 sudo systemctl start intercom.service
 ```
+For the FOH Pi, set up the system status broker service:
+```bash
+sudo cp systemd/system_status_broker.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable system_status_broker.service
+sudo systemctl start system_status_broker.service
+```
+
+---
 
 ## 7. Updating
 To update the software on all Pis:
@@ -108,20 +113,6 @@ sudo systemctl restart intercom.service
 
 ---
 
-## 8. System Status Broker Service (Recommended for FOH Pi)
-This service monitors all stations and publishes system status to the network. It should run only on the FOH Pi.
-
-1. Copy the service file:
-   ```bash
-   sudo cp systemd/system_status_broker.service /etc/systemd/system/
-   sudo systemctl daemon-reload
-   sudo systemctl enable system_status_broker.service
-   sudo systemctl start system_status_broker.service
-   ```
-2. The broker will now monitor all stations and publish status to the MQTT topic.
-
----
-
 ## Code Structure (Modular Python)
 - `main.py`: Main entry point for each station. Loads config, sets up GPIO and MQTT, runs the main loop.
 - `gpio_control.py`: GPIO setup and all LED/button logic, thread-safe.
@@ -129,21 +120,29 @@ This service monitors all stations and publishes system status to the network. I
 - `config.py`: Loads configuration from environment variables or `.env` file.
 - `system_status_broker.py`: Monitors all stations and publishes system status (run on FOH Pi).
 
-## .env Configuration (Advanced/Optional)
-You can use a `.env` file in the `software/` directory to override any environment variable. Example:
+## Advanced .env Configuration (Optional)
+You can use the `.env` file in the `software/` directory to override any environment variable. Example:
 ```
-INTERCOM_STATION=foh
-INTERCOM_BROKER=192.168.178.11
-BUTTON_PINS=17,27,22
-LED_PINS=5,6,26
+STATION_NAME=foh
+MQTT_BROKER=192.168.178.11
+MQTT_PORT=1883
+STATIONS=foh,stage_left,stage_right
+DEBOUNCE_TIME=0.2
+RESPOND_DURATION=5
+BLINK_DURATION=20
+TIMEOUT=15
+
+BUTTON_PIN_Green=17
+BUTTON_PIN_Orange=27
+BUTTON_PIN_Red=22
+LED_PIN_Green=5
+LED_PIN_Orange=6
+LED_PIN_Red=26
 RGB_PIN_R=23
 RGB_PIN_G=24
 RGB_PIN_B=25
-MQTT_PORT=1883
-MQTT_TOPIC=intercom/buttons
-STATUS_TOPIC=intercom/system_status
 ```
 
-Any variable not set in `.env` will fall back to the default in the code.
+Any variable not set in `.env` will fall back to the default in this example code.
 
 ---

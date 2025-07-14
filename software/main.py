@@ -1,3 +1,4 @@
+import sys
 import logging
 import time
 import signal
@@ -5,12 +6,18 @@ import paho.mqtt.client as mqtt
 from config import load_config
 from gpio_control import GPIOController
 from mqtt_client import MQTTHandler
+import threading
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
 
 # Load configuration
 config = load_config()
+
+HEARTBEAT_TOPIC = 'intercom/heartbeat'
+STATUS_TOPIC = 'intercom/system_status'
+BUTTON_TOPIC = 'intercom/buttons'
+HEARTBEAT_INTERVAL = config['HEARTBEAT_INTERVAL']
 
 # Setup GPIO controller
 gpio = GPIOController(
@@ -23,12 +30,12 @@ gpio = GPIOController(
 mqtt_handler = MQTTHandler(
     broker=config['MQTT_BROKER'],
     port=config['MQTT_PORT'],
-    topic=config['MQTT_TOPIC'],
-    status_topic=config['STATUS_TOPIC']
+    button_topic=BUTTON_TOPIC,
+    status_topic=STATUS_TOPIC
 )
 
 # --- Main application logic ---
-def handle_button_event(station: str, button_idx: int, ts: float):
+def handle_button_event(station: str, button_idx: int):
     """Handle a button event from another station."""
     now = time.time()
     if station == config['STATION_NAME']:
@@ -52,18 +59,35 @@ def check_network() -> bool:
         logging.warning(f"Network check failed: {e}")
         return False
 
-import sys
 def cleanup(signum=None, frame=None):
     logging.info("Cleaning up GPIO and exiting...")
     gpio.cleanup()
     sys.exit(0)
 
+def send_heartbeat_loop():
+    """Send periodic heartbeat messages to indicate station is online."""
+    index = 0
+    while True:
+        try:
+            payload = f"{config['STATION_NAME']}:{index}"
+            mqtt_handler.client.publish(HEARTBEAT_TOPIC, payload)
+            index += 1
+            logging.debug(f"Sent heartbeat: {payload}")
+        except Exception as e:
+            logging.error(f"Failed to send heartbeat: {e}")
+        time.sleep(HEARTBEAT_INTERVAL)
+
+# Register cleanup function for graceful shutdown
 signal.signal(signal.SIGINT, cleanup)
 signal.signal(signal.SIGTERM, cleanup)
 
 # Register event handler
 mqtt_handler.on_button_event = handle_button_event
 mqtt_handler.connect()
+
+# Start heartbeat sender thread
+heartbeat_thread = threading.Thread(target=send_heartbeat_loop, daemon=True)
+heartbeat_thread.start()
 
 def main_loop():
     while True:
