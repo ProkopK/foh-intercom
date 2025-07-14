@@ -18,21 +18,25 @@
 - (Future) Connect headset via USB or audio jack
 
 ## GPIO Pin Assignment
+Green Button:
 - Button Green (NC): GPIO 17
 - Button Green (C): Ground
 - Button LED Green (+): GPIO 5
 - Button LED Green (-): Ground
 
+Orange Button:
 - Button Orange (NC): GPIO 27
 - Button Orange (C): Ground
 - Button LED Orange (+): GPIO 6
 - Button LED Orange (-): Ground
 
+Red Button:
 - Button Red (NC): GPIO 22
 - Button Red (C): Ground
 - Button LED Red (+): GPIO 26
 - Button LED Red (-): Ground
 
+RGB Status LED:
 - RGB LED: GPIO 23 (R), 24 (G), 25 (B)
 - RGB LED Common Cathode: Ground
 

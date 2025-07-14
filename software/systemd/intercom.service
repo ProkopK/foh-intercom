@@ -1,9 +1,8 @@
 [Unit]
-Description=FOH Intercom Service
-After=network.target
+Description=Intercom Service
 
 [Service]
-ExecStart=/usr/bin/python3 /home/pi/foh-intercom/software/main.py
+ExecStart=/home/pi/foh-intercom/venv/bin/python3 /home/pi/foh-intercom/software/main.py
 WorkingDirectory=/home/pi/foh-intercom/software/
 Restart=always
 User=pi

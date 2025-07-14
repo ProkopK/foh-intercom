@@ -1,9 +1,8 @@
 [Unit]
-Description=FOH Intercom System Status Broker
-After=network.target
+Description=Intercom System Status Broker
 
 [Service]
-ExecStart=/usr/bin/python3 /home/pi/foh-intercom/software/system_status_broker.py
+ExecStart=/home/pi/foh-intercom/venv/bin/python3 /home/pi/foh-intercom/software/system_status_broker.py
 WorkingDirectory=/home/pi/foh-intercom/software/
 Restart=always
 User=pi

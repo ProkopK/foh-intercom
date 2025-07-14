@@ -77,6 +77,8 @@ def send_heartbeat_loop():
             logging.error(f"Failed to send heartbeat: {e}")
         time.sleep(HEARTBEAT_INTERVAL)
 
+gpio.set_rgb(0, 0, 1)  # Set initial RGB to blue (unknown state)
+
 # Register cleanup function for graceful shutdown
 signal.signal(signal.SIGINT, cleanup)
 signal.signal(signal.SIGTERM, cleanup)
