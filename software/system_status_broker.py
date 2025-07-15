@@ -6,7 +6,7 @@ It listens for heartbeat messages from each station and publishes the overall sy
 import os
 import time
 import logging
-import paho.mqtt.client as mqtt
+import paho.mqtt.client as mqtt # type: ignore
 from config import load_config
 
 config = load_config()

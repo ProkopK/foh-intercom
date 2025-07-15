@@ -1,7 +1,7 @@
 """
 GPIO setup and LED/button logic for FOH Intercom.
 """
-import RPi.GPIO as GPIO
+import RPi.GPIO as GPIO # type: ignore
 import threading
 import time
 from typing import List, Dict
@@ -16,6 +16,7 @@ class GPIOController:
         self.led_lock = threading.Lock()
         self.last_button = [1] * len(button_pins)
         self.last_press_time = [0] * len(button_pins)
+        self.last_station = [None] * len(button_pins)
         self.setup_gpio()
 
     def setup_gpio(self):
@@ -60,6 +61,11 @@ class GPIOController:
         t = threading.Thread(target=_respond)
         t.daemon = True
         t.start()
+
+    def stop_led(self, idx: int):
+        with self.led_lock:
+            self.led_blink_end[idx] = 0
+            self.led_respond_end[idx] = 0
 
     def read_button(self, idx: int) -> int:
         return GPIO.input(self.button_pins[idx])

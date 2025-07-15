@@ -2,7 +2,7 @@ import sys
 import logging
 import time
 import signal
-import paho.mqtt.client as mqtt
+import paho.mqtt.client as mqtt # type: ignore
 from config import load_config
 from gpio_control import GPIOController
 from mqtt_client import MQTTHandler
@@ -36,17 +36,25 @@ mqtt_handler = MQTTHandler(
 
 # --- Main application logic ---
 def handle_button_event(station: str, button_idx: int):
-    """Handle a button event from another station."""
+    """Handle a button event from another station or self."""
     now = time.time()
-    if station == config['STATION_NAME']:
-        return
     # Protect shared state with lock
     with gpio.led_lock:
-        if gpio.led_blink_end[button_idx] > now:
-            gpio.led_blink_end[button_idx] = 0
-            gpio.respond_led(button_idx, config['RESPOND_DURATION'])
-        else:
+        # If not blinking, start blinking and record station
+        if gpio.led_blink_end[button_idx] <= now:
             gpio.blink_led(button_idx, config['BLINK_DURATION'])
+            gpio.last_station[button_idx] = station
+        else:
+            # If same station presses again, stop blinking
+            if gpio.last_station[button_idx] == station:
+                gpio.led_blink_end[button_idx] = 0
+                gpio.last_station[button_idx] = None
+                gpio.stop_led(button_idx)
+            else:
+                # If different station, respond (light up)
+                gpio.led_blink_end[button_idx] = 0
+                gpio.last_station[button_idx] = None
+                gpio.respond_led(button_idx, config['RESPOND_DURATION'])
 
 def check_network() -> bool:
     # Simple broker check using MQTT connect
@@ -109,7 +117,6 @@ def main_loop():
             if state == 0 and gpio.last_button[i] == 1 and (now - gpio.last_press_time[i]) > config['DEBOUNCE_TIME']:
                 # Button pressed
                 mqtt_handler.send_button_event(config['STATION_NAME'], i)
-                gpio.blink_led(i, config['BLINK_DURATION'])
                 gpio.last_press_time[i] = now
             gpio.last_button[i] = state
         time.sleep(0.05)

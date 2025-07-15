@@ -2,7 +2,7 @@
 Configuration and environment variable parsing for FOH Intercom.
 """
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv # type: ignore
 from typing import List, Dict
 
 def load_config() -> Dict:
@@ -27,7 +27,7 @@ def load_config() -> Dict:
         'BLINK_DURATION': int(os.getenv("BLINK_DURATION", 20)),
         'RESPOND_DURATION': int(os.getenv("RESPOND_DURATION", 5)),
         'DEBOUNCE_TIME': float(os.getenv("DEBOUNCE_TIME", 0.2)),
-        'STATION_NAME': os.getenv("INTERCOM_STATION", "foh"),
+        'STATION_NAME': os.getenv("STATION_NAME", "foh"),
         'MQTT_BROKER': os.getenv("MQTT_BROKER", "192.168.178.11"),
         'MQTT_PORT': int(os.getenv("MQTT_PORT", 1883)),
         'STATIONS': os.getenv("STATIONS", "foh,stage_left,stage_right").split(","),

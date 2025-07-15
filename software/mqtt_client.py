@@ -1,7 +1,7 @@
 """
 MQTT connection, message handling, and status logic for FOH Intercom.
 """
-import paho.mqtt.client as mqtt
+import paho.mqtt.client as mqtt # type: ignore
 import time
 import logging
 from typing import Callable

@@ -8,7 +8,7 @@
 - Download and flash Raspberry Pi OS (Lite recommended) to each Pi
 - Boot each Pi and connect via SSH
 
-## 2.1 Set a Static IP Address (Required for FOH Intercom, optional but recommended for all Pis)
+## 3 Set a Static IP Address (Required for FOH Intercom, optional but recommended for all Pis)
 To ensure reliable communication, assign a static IP address to each Raspberry Pi:
 
 ```bash
@@ -20,12 +20,12 @@ sudo nmcli con up "Wired connection 1"
 ```
 Repeat for each Pi, changing the IP address (e.g., 192.168.178.12)
 
-Verify the IP address with:
+After restarting the network connection, verify the static IP address:
 ```bash
 hostname -I
 ```
 
-## 3. Install Required Software on Each Pi
+## 4. Install Required Software on Each Pi
 On each Pi, run:
 ```bash
 sudo apt update
@@ -40,7 +40,7 @@ pip --version
 git --version
 ```
 
-### 3.1 Set Up the FOH Station as MQTT Broker
+### 4.1 Set Up the FOH Station as MQTT Broker
 Only on the FOH Pi:
 
 ```bash
@@ -54,13 +54,13 @@ hostname -I
 ```
 Use this IP for `MQTT_BROKER` later in your config.
 
-## 4. Clone the Repository on All Pis
+## 5. Clone the Repository on All Pis
 ```bash
 git clone https://github.com/ProkopK/foh-intercom.git
 cd foh-intercom/software
 ```
 
-## 5. Install Python Dependencies and Set Environment Variables
+## 6. Install Python Dependencies and Set Environment Variables
 On each Pi run the following commands:
 ```bash
 python3 -m venv ~/foh-intercom/venv
@@ -71,13 +71,13 @@ pip install -r requirements.txt
 Set up environment variables for each Pi, change the values. Use the IP address of the FOH Pi as `MQTT_BROKER`, as `STATION_NAME` use `foh` for the FOH Pi and `stage_left` or `stage_right` for the stage Pi:
 ```bash
 touch .env
-echo "export STATION_NAME=foh" >> .env
-echo "export MQTT_BROKER=192.168.178.11" >> .env
-echo "export STATIONS=foh,stage_left,stage_right" >> .env
-echo "export MQTT_PORT=1883" >> .env
+echo "STATION_NAME=foh" >> .env
+echo "MQTT_BROKER=192.168.178.11" >> .env
+echo "STATIONS=foh,stage_left,stage_right" >> .env
+echo "MQTT_PORT=1883" >> .env
 ```
 
-## 6. Enable Auto-Start with systemd
+## 7. Enable Auto-Start with systemd
 For each Pi, copy the service file and enable it:
 ```bash
 sudo cp systemd/intercom.service /etc/systemd/system/
@@ -95,7 +95,7 @@ sudo systemctl start system_status_broker.service
 
 ---
 
-## 7. Updating
+## 8. Updating
 To update the software on all Pis:
 ```bash
 git pull
