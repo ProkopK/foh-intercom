@@ -2,7 +2,7 @@
 Configuration and environment variable parsing for FOH Intercom.
 """
 import os
-from dotenv import load_dotenv # type: ignore
+from dotenv import load_dotenv
 from typing import List, Dict
 
 def load_config() -> Dict:

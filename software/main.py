@@ -47,14 +47,18 @@ def handle_button_event(station: str, button_idx: int):
         else:
             # If same station presses again, stop blinking
             if gpio.last_station[button_idx] == station:
+                # Stop blinking if same button pressed
                 gpio.led_blink_end[button_idx] = 0
                 gpio.last_station[button_idx] = None
-                gpio.stop_led(button_idx)
-            else:
-                # If different station, respond (light up)
+            elif gpio.last_station[button_idx] != None:
+                # If another station pressed, stop blinking and respond
                 gpio.led_blink_end[button_idx] = 0
                 gpio.last_station[button_idx] = None
                 gpio.respond_led(button_idx, config['RESPOND_DURATION'])
+            else:
+                # Unexpected situation, log warning
+                logging.warning("Unexpected situation with button presses")
+
 
 def check_network() -> bool:
     # Simple broker check using MQTT connect

@@ -4,7 +4,7 @@ GPIO setup and LED/button logic for FOH Intercom.
 import RPi.GPIO as GPIO # type: ignore
 import threading
 import time
-from typing import List, Dict
+from typing import Dict
 
 class GPIOController:
     def __init__(self, button_pins: Dict[int, int], led_pins: Dict[int, int], rgb_pins: Dict[str, int]):
@@ -53,11 +53,10 @@ class GPIOController:
 
     def respond_led(self, idx: int, duration: int):
         def _respond():
-            GPIO.output(self.led_pins[idx], 1)
-            time.sleep(duration)
+            end_time = time.time() + duration
+            while time.time() < end_time:
+                GPIO.output(self.led_pins[idx], 1)
             GPIO.output(self.led_pins[idx], 0)
-        with self.led_lock:
-            self.led_respond_end[idx] = time.time() + duration
         t = threading.Thread(target=_respond)
         t.daemon = True
         t.start()
